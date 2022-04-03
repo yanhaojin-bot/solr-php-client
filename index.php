@@ -3,9 +3,9 @@
 header('Content-Type: text/html; charset=utf-8');
 $limit = 10;
 $query = isset($_REQUEST['q']) ? $_REQUEST['q'] : false;
-$results = false; 
+$results = false;
 $path2url = array_column(array_map('str_getcsv', file('/Users/yanhaojin/Downloads/LATIMES/URLtoHTML_latimes_news.csv')), 1, 0);
-
+$rankAlgo = "Lucene";
 
 if ($query) {
     // Lucene's ranking algorithm (default)
@@ -28,15 +28,15 @@ if ($query) {
     // problems or a query parsing error)
     try {
         $additionalParameters = array(
-            'fq' => 'a filtering query',
-            'facet' => 'true',
-            // notice I use an array for a multi-valued parameter
-            'facet.field' => array(
-                'field_1',
-                'field_2'
-            )
+            'sort' => 'pageRankFile desc'
+
         );
-        $results = $solr->search($query, 0, $limit);
+
+        if ($_GET['rankAlgo'] == "Lucene") {
+            $results = $solr->search($query, 0, $limit);
+        } else if ($_GET['rankAlgo'] == "PageRank") {
+            $results = $solr->search($query, 0, $limit, $additionalParameters);
+        }
     } catch (Exception $e) {
         // in production you'd probably log or email this error to an admin
         // and then show a special message to the user but for this example
@@ -55,9 +55,17 @@ if ($query) {
     <form accept-charset="utf-8" method="get">
         <label for="q">Search:</label>
         <input id="q" name="q" type="text" value="<?php echo htmlspecialchars($query, ENT_QUOTES, 'utf-8'); ?>" />
-        <input type="submit" name="submit" value="Submit">
+        <label for="pageRank"> Rank algorithm: </label>
+        <input type="radio" name="rankAlgo" value="Lucene" <?php if (isset($_REQUEST['rankAlgo']) && $_REQUEST['rankAlgo'] == 'Lucene') {
+																	echo 'checked="checked"';
+																} ?>>Lucene
+        <input type="radio" name="rankAlgo" value="PageRank"<?php if (isset($_REQUEST['rankAlgo']) && $_REQUEST['rankAlgo'] == 'PageRank') {
+																	echo 'checked="checked"';
+																} ?>>PageRank
+        <input type="submit">
     </form>
     <?php
+    
     // display results
     if ($results) {
         $total = (int) $results->response->numFound;
@@ -85,14 +93,12 @@ if ($query) {
             ?>
                 <li>
                     <tablestyle="border: 1px solid black; text-align: left>
-                            <tr>
-                            <?php echo "Title : <a href = $url> $title;</a></br>"?>
-			                <?php echo "URL : <a href = $url> $url;</a></br>"?>
-                            <?php echo "ID : $id;</br>"?>
-			                <?php echo "Desc : $desc</br>"?>
-                                <!-- <th><?php echo htmlspecialchars($field, ENT_NOQUOTES, 'utf-8'); ?></th>
-                                <td><?php echo htmlspecialchars($value, ENT_NOQUOTES, 'utf-8'); ?></td> -->
-                            </tr>
+                        <tr>
+                            <?php echo "Title : <a href = $url> $title;</a></br>" ?>
+                            <?php echo "URL : <a href = $url> $url;</a></br>" ?>
+                            <?php echo "ID : $id;</br>" ?>
+                            <?php echo "Desc : $desc</br>" ?>
+                        </tr>
                         <?php
                         //}
                         ?>
@@ -104,9 +110,9 @@ if ($query) {
         </ol>
     <?php
     } else {
-    ?> <h1> empty </h1> <?php
-                                }
-                                    ?>
+    ?> <h1> <?php echo  $rankAlgo ?> </h1> <?php
+                                        }
+                                            ?>
 </body>
 
 </html>
