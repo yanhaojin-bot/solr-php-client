@@ -1,6 +1,9 @@
 <?php
+ini_set("memory_limit", -1);
+include 'SpellCorrector.php';
+
 // make sure browsers see this page as utf-8 encoded HTML
-header('Content-Type: text/html; charset=utf-8');
+//header('Content-Type: text/html; charset=utf-8');
 $limit = 10;
 $query = isset($_REQUEST['q']) ? $_REQUEST['q'] : false;
 $results = false;
@@ -31,11 +34,11 @@ if ($query) {
             'sort' => 'pageRankFile desc'
 
         );
-
+        $correct_term = SpellCorrector::correct($query);
         if ($_GET['rankAlgo'] == "Lucene") {
-            $results = $solr->search($query, 0, $limit);
+            $results = $solr->search($correct_term, 0, $limit);
         } else if ($_GET['rankAlgo'] == "PageRank") {
-            $results = $solr->search($query, 0, $limit, $additionalParameters);
+            $results = $solr->search($correct_term, 0, $limit, $additionalParameters);
         }
     } catch (Exception $e) {
         // in production you'd probably log or email this error to an admin
