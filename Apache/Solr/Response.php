@@ -194,7 +194,7 @@ class Apache_Solr_Response
 	 *
 	 * @throws Apache_Solr_ParserException If the data could not be parsed
 	 */
-	protected function _parseData()
+	public function _parseData()
 	{
 		//An alternative would be to use Zend_Json::decode(...)
 		$data = json_decode($this->_response->getBody());

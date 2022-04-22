@@ -34,11 +34,10 @@ if ($query) {
             'sort' => 'pageRankFile desc'
 
         );
-        $correct_term = SpellCorrector::correct($query);
         if ($_GET['rankAlgo'] == "Lucene") {
-            $results = $solr->search($correct_term, 0, $limit);
+            $results = $solr->search($query, 0, $limit);
         } else if ($_GET['rankAlgo'] == "PageRank") {
-            $results = $solr->search($correct_term, 0, $limit, $additionalParameters);
+            $results = $solr->search($query, 0, $limit, $additionalParameters);
         }
     } catch (Exception $e) {
         // in production you'd probably log or email this error to an admin
@@ -55,20 +54,92 @@ if ($query) {
 </head>
 
 <body>
+    <style>
+        #suggestion-list {
+            float: left;
+            list-style: none;
+            margin-top: -3px;
+            padding: 0;
+            width: 190px;
+            position: absolute;
+        }
+
+        #suggestion-list li {
+            padding: 10px;
+            background: #f0f0f0;
+            border-bottom: #bbb9b9 1px solid;
+        }
+
+        #suggestion-list li:hover {
+            background: #ece3d2;
+            cursor: pointer;
+        }
+
+        #search-box {
+            padding: 10px;
+            border: #a8d4b1 1px solid;
+            border-radius: 4px;
+        }
+    </style>
+
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js" type="text/javascript"></script>
+    <script>
+        $(document).ready(function() {
+            $("#search-box").keyup(function() {
+                $.ajax({
+                    type: "GET",
+                    url: "suggest.php",
+                    data: 'q=' + $(this).val(),
+                    beforeSend: function() {
+                        
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        $("#suggesstion-box").show();
+                        $("#suggesstion-box").html(data);
+                        $("#search-box").css("background", "#FFF");
+                    }
+                });
+            });
+        });
+
+        function selectCountry(val) {
+            $("#search-box").val(val);
+            $("#suggesstion-box").hide();
+        }
+    </script>
     <form accept-charset="utf-8" method="get">
-        <label for="q">Search:</label>
-        <input id="q" name="q" type="text" value="<?php echo htmlspecialchars($query, ENT_QUOTES, 'utf-8'); ?>" />
-        <label for="pageRank"> Rank algorithm: </label>
-        <input type="radio" name="rankAlgo" value="Lucene" <?php if (isset($_REQUEST['rankAlgo']) && $_REQUEST['rankAlgo'] == 'Lucene') {
-																	echo 'checked="checked"';
-																} ?>>Lucene
-        <input type="radio" name="rankAlgo" value="PageRank"<?php if (isset($_REQUEST['rankAlgo']) && $_REQUEST['rankAlgo'] == 'PageRank') {
-																	echo 'checked="checked"';
-																} ?>>PageRank
-        <input type="submit">
+        <div class="frmSearch">
+            <!-- <input type="text" id="search-box" name="q" placeholder="Country Name" /> -->
+            <!-- <div id="suggesstion-box"></div> -->
+
+            <label for="q">Search:</label>
+            <!-- <input id="search-box" name="q" type="text" value="<?php echo htmlspecialchars($query, ENT_QUOTES, 'utf-8'); ?>" /> -->
+            <input type="text" id="search-box" name="q" placeholder="keyword" />
+            <div id="suggesstion-box"></div>
+            <label for="pageRank"> Rank algorithm: </label>
+            <input type="radio" name="rankAlgo" value="Lucene" <?php if (isset($_REQUEST['rankAlgo']) && $_REQUEST['rankAlgo'] == 'Lucene') {
+                                                                    echo 'checked="checked"';
+                                                                } ?>>Lucene
+            <input type="radio" name="rankAlgo" value="PageRank" <?php if (isset($_REQUEST['rankAlgo']) && $_REQUEST['rankAlgo'] == 'PageRank') {
+                                                                        echo 'checked="checked"';
+                                                                    } ?>>PageRank
+            <input type="submit">
+        </div>
     </form>
     <?php
-    
+
+
+    if ($query) {
+        // display correction
+        $correct_term = SpellCorrector::correct($query);
+        if (strcmp($correct_term, $query) != 0) {
+            $link_address = "http://localhost:9000/?q=". $correct_term . "&rankAlgo=". $_REQUEST['rankAlgo'];
+            echo "Did you mean <a href='$link_address'> $correct_term </a>";
+        } 
+    }
+
+
     // display results
     if ($results) {
         $total = (int) $results->response->numFound;
@@ -113,7 +184,7 @@ if ($query) {
         </ol>
     <?php
     } else {
-    ?> <h1> <?php echo  $rankAlgo ?> </h1> <?php
+    ?>  <?php
                                         }
                                             ?>
 </body>
